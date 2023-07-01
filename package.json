@@ -1,5 +1,15 @@
 {
   "dependencies": {
+    "elliptic": "^6.5.4",
     "sha256": "^0.2.0"
-  }
+  },
+  "name": "cnm_csm_pj",
+  "version": "1.0.0",
+  "main": "block.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
