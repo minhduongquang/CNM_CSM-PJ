@@ -107,13 +107,12 @@ class Transaction {
     }
 
     isValid(tx, chain){
-        return {
+        return (
             tx.from &&
             tx.to &&
             tx.amount &&
             chain.getBalance(tx) >= tx.amount &&
-            ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.gas))
-        }
+            ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.gas), tx.signature))
     }
 }
 
