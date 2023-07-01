@@ -8,6 +8,11 @@ const EC = require('elliptic'), ec = new EC('secp256k1');
 
 const keyPair = ec.genKeyPair();
 
+const MINT_KEY_PAIR = ec.genKeyPair();
+
+const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic('hex');
+
+const holderKeyPair = ec.genKeyPair();
 
 class Block {
     constructor(timestamp = "", data = []) {
@@ -26,11 +31,15 @@ class Block {
             this.hash = this.getHash()
         }
     }
+    hasValidTransaction(chain){
+        return this.data.every(transaction => transaction.isValid(transaction, chain))
+    }
 }
 
 class BlockChain {
     constructor(){
-        this.chain = [new Block(Date.now().toString())]
+        const initialCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, holderKeyPair.getPublic("hex"), 100000);
+        this.chain = [new Block(Date.now().toString(), [initialCoinRelease])];
         this.difficulty = 1;
         this.blockTime = 30000;
         this.transaction = [];
@@ -71,11 +80,17 @@ class BlockChain {
     }
 
     addTransaction(transaction){
-        this.transaction.push(transaction);
+        if(transaction.isValid(this)){
+            this.transaction.push(transaction);
+        } 
     }
 
     mineTransaction(rewardAddress){
-        this.addBlock(new Block(Date.now().toString(), [new Transaction(CREATE_REWARD_ADDRESS, rewardAddress, this.reward), ...this.transaction]));
+        const rewardTransaction = new Transaction(MINT_PUBLIC_ADDRESS, rewardAddress, this.reward);
+
+        rewardTransaction.sign(MINT_KEY_PAIR);
+
+        this.addBlock(new Block(Date.now().toString(), [rewardTransaction, ...this.transaction]));
 
         this.transaction = [];
     }
@@ -85,7 +100,11 @@ class BlockChain {
             const currentBlock = BlockChain.chain[i];
             const prevBlock = BlockChain.chain[i-1];
 
-            if (currentBlock.hash !== currentBlock.getHash() || prevBlock.hash !== currentBlock.prevHash) {
+            if (
+                currentBlock.hash !== currentBlock.getHash() ||
+                prevBlock.hash !== currentBlock.prevHash ||
+                currentBlock.hasValidTransaction(BlockChain)
+            ) {
                 return false;
             }
         }
@@ -111,7 +130,7 @@ class Transaction {
             tx.from &&
             tx.to &&
             tx.amount &&
-            chain.getBalance(tx) >= tx.amount &&
+            (chain.getBalance(tx) >= tx.amount || tx.from === MINT_PUBLIC_ADDRESS && tx.amount === this.reward) &&
             ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.gas), tx.signature))
     }
 }
