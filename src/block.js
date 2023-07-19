@@ -7,13 +7,19 @@ SHA256 = (message) => sha256(message);
 const EC = require("elliptic").ec,
   ec = new EC("secp256k1");
 
-const keyPair = ec.genKeyPair();
+// const keyPair = ec.genKeyPair();
 
-const MINT_KEY_PAIR = ec.genKeyPair();
+// const MINT_KEY_PAIR = ec.genKeyPair();
 
-const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
+// const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
 
-const holderKeyPair = ec.genKeyPair();
+// const holderKeyPair = ec.genKeyPair();
+
+const MINT_PRIVATE_ADDRESS = "049ff90c66602bc415a0659e04ada68dd810b38f5cad8a033d006cdfe426e36ff4cd285d530c2824b715c3799f77aef41e0b1fd8e174ead0669dfd5b0a1b12349d";
+
+const MINT_KEY_PAIR = ec.keyFromPrivate(MINT_PRIVATE_ADDRESS, "hex")
+
+const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex")
 
 class Block {
     constructor(timestamp = "", data = []) {
@@ -56,8 +62,9 @@ class Block {
 
 class Blockchain {
     constructor() {
-        const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, holderKeyPair.getPublic("hex"), 100000);
-        this.chain = [new Block(Date.now().toString(), [initalCoinRelease])];
+        //const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, holderKeyPair.getPublic("hex"), 100000); // Genesis block 
+        const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, "04d2acede993eae83522d324bbb17d9f8d8c65813b295aa0c04747efdf48b803a56e852aa1b861d0f224e22dd6302abe32c6ee77f13107a8b946e4fea6a3ffaa61", 100000); 
+        this.chain = [new Block("", [initalCoinRelease])]; //Setup timestamp for sync
         this.difficulty = 1;
         this.blockTime = 30000;
         this.transactions = [];
