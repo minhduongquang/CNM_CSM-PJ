@@ -30,8 +30,8 @@ class Block {
         this.nonce = 0;
     }
 
-    getHash() {
-        return SHA256(this.prevHash + this.timestamp + JSON.stringify(this.data) + this.nonce);
+    static getHash(block) {
+        return SHA256(block.prevHash + block.timestamp + JSON.stringify(block.data) + block.nonce);
     }
 
     mine(difficulty) {
@@ -41,10 +41,10 @@ class Block {
         }
     }
 
-    hasValidTransactions(chain) {
+    static hasValidTransactions(block, chain) {
         let gas = 0, reward = 0;
 
-        this.data.forEach(transaction => {
+        block.data.forEach(transaction => {
             if (transaction.from !== MINT_PUBLIC_ADDRESS) {
                 gas += transaction.gas;
             } else {
@@ -54,8 +54,8 @@ class Block {
 
         return (
             reward - gas === chain.reward &&
-            this.data.every(transaction => transaction.isValid(transaction, chain)) && 
-            this.data.filter(transaction => transaction.from === MINT_PUBLIC_ADDRESS).length === 1
+            block.data.every(transaction => transaction.isValid(transaction, chain)) && 
+            block.data.filter(transaction => transaction.from === MINT_PUBLIC_ADDRESS).length === 1
         );
     }
 }
@@ -126,15 +126,15 @@ class Blockchain {
         this.transactions = [];
     }
 
-    isValid(blockchain = this) {
+    static isValid(blockchain) {
         for (let i = 1; i < blockchain.chain.length; i++) {
             const currentBlock = blockchain.chain[i];
             const prevBlock = blockchain.chain[i-1];
 
             if (
-                currentBlock.hash !== currentBlock.getHash() || 
+                currentBlock.hash !== Block.getHash(currentBlock) || 
                 prevBlock.hash !== currentBlock.prevHash || 
-                !currentBlock.hasValidTransactions(blockchain)
+                !Block.hasValidTransactions(currentBlock, blockchain)
             ) {
                 return false;
             }
@@ -159,13 +159,13 @@ class Transaction {
             }
         }
 
-        isValid(tx, chain) {
+        static  isValid(tx, chain) {
             return (
                 tx.from &&
                 tx.to &&
                 tx.amount &&
                 // Add gas
-                (chain.getBalance(tx.from) >= tx.amount + tx.gas || tx.from === MINT_PUBLIC_ADDRESS && tx.amount === chain.reward) &&
+                (chain.getBalance(tx.from) >= tx.amount + tx.gas || tx.from === MINT_PUBLIC_ADDRESS) &&
                 ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.amount + tx.gas), tx.signature)
             );
         }
