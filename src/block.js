@@ -6,15 +6,7 @@ SHA256 = (message) => sha256(message);
 
 const EC = require("elliptic").ec,
   ec = new EC("secp256k1");
-
-// const keyPair = ec.genKeyPair();
-
-// const MINT_KEY_PAIR = ec.genKeyPair();
-
-// const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
-
-// const holderKeyPair = ec.genKeyPair();
-
+  
 const MINT_PRIVATE_ADDRESS = "049ff90c66602bc415a0659e04ada68dd810b38f5cad8a033d006cdfe426e36ff4cd285d530c2824b715c3799f77aef41e0b1fd8e174ead0669dfd5b0a1b12349d";
 
 const MINT_KEY_PAIR = ec.keyFromPrivate(MINT_PRIVATE_ADDRESS, "hex")
@@ -25,7 +17,7 @@ class Block {
     constructor(timestamp = "", data = []) {
         this.timestamp = timestamp;
         this.data = data;
-        this.hash = this.getHash();
+        this.hash = Block.getHash(this);
         this.prevHash = "";
         this.nonce = 0;
     }
@@ -37,7 +29,7 @@ class Block {
     mine(difficulty) {
         while(!this.hash.startsWith(Array(difficulty + 1).join("0"))) {
             this.nonce++;
-            this.hash = this.getHash();
+            this.hash = Block.getHash(this);
         }
     }
 
@@ -96,7 +88,7 @@ class Blockchain {
 
     addBlock(block) {
         block.prevHash = this.getLastBlock().hash;
-        block.hash = block.getHash();
+        block.hash = Block.getHash(block);
 
         block.mine(this.difficulty);
         this.chain.push(block);
@@ -105,7 +97,7 @@ class Blockchain {
     }
 
     addTransaction(transaction) {
-        if (transaction.isValid(transaction, this)) {
+        if (Transaction.isValid(transaction, this)) {
             this.transactions.push(transaction);
         }
     }

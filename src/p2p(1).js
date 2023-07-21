@@ -12,23 +12,17 @@ const MINT_PRIVATE_ADDRESS = "049ff90c66602bc415a0659e04ada68dd810b38f5cad8a033d
 const MINT_KEY_PAIR = ec.keyFromPrivate(MINT_PRIVATE_ADDRESS, "hex");
 
 const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
-
-// console.log("MINT_PRIVATE_ADDRESS: ", MINT_PRIVATE_ADDRESS)
-
-// console.log("MINT_KEY_PAIR: ", MINT_KEY_PAIR)
-
-// console.log("MINT_PUBLIC_ADDRESS: ", MINT_PUBLIC_ADDRESS)
-
-const privateKey = '94f87428dda6b4017281499ac8d845d244a2f70accd06ee5727b1b074ff3f23d' // Private key of current user 
+const privateKey = '913c410f4e9cc6d439268d79dba86e442c7b8989ebc22a7823e475ae230117e6';
 const keyPair = ec.keyFromPrivate(privateKey, "hex");
 const publicKey = keyPair.getPrivate("hex");
 
 const WS = require("ws");
 
-const PORT = 3000;
-const PEERS = ["ws://localhost:3000"];
-const MY_ADDRESS = "ws://localhost:3000";
-const server = new WS.Server({ port: PORT });
+const PORT = 3001;
+console.log('port: ', PORT)
+const PEERS = ["ws://localhost:3001"];
+const MY_ADDRESS = "ws://localhost:3001";
+const server = new WS.Server({ port: 3001});
 
 let opened = [], connected = [];
 let check = [];
@@ -221,18 +215,17 @@ process.on("uncaughtException", err => console.log(err));
 PEERS.forEach(peer => connect(peer));
 
 setTimeout(() => {
-	const transaction = new Transaction(publicKey, "04ba19a40a66498f71b6363bbfa36f1f0b36b004219860e122b597438966dc173677af7da5a1454e1e7cc2d2b4d2ec9fae4fc4fb589b507dd3a9409f681a6312b7", 200, 10);
+	if (Crypto.transactions.length !== 0) {
+		Crypto.mineTransactions(publicKey);
 
-	transaction.sign(keyPair);
-
-	sendMessage(produceMessage("TYPE_CREATE_TRANSACTION", transaction));
-
-	Crypto.addTransaction(transaction);
-    Crypto.mineTransactions("04ba19a40a66498f71b6363bbfa36f1f0b36b004219860e122b597438966dc173677af7da5a1454e1e7cc2d2b4d2ec9fae4fc4fb589b507dd3a9409f681a6312b7");
-
-}, 50);
+		sendMessage(produceMessage("TYPE_REPLACE_CHAIN", [
+			Crypto.getLastBlock(),
+			Crypto.difficulty
+		]))
+	}
+}, 6500);
 
 setTimeout(() => {
 	console.log(opened);
 	console.log(Crypto);
-}, 10);
+}, 10000);

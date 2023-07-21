@@ -1,0 +1,44 @@
+BLOCKCHAIN TUTORIAL: 
+    + Các bài viết từ Viblo.asia:
+        - https://viblo.asia/u/freakcdev
+TỔNG QUAN: 
+- Sử dụng JavaScript để tạo một mạng lưới Blockchain bao gồm mạng P2P
+- Blockchain này sử dụng giao thức Proof of Work cho quá trình giao dịch, mine, ...
+- Proof of Work được sử dụng cho hệ thống này như sau: 
+    + Tạo một method "mine" cũng như các giá trị nonce để tăng difficulty cho chain nhằm tăng độ khó cho chain mà qua đó ngăn chặn được việc chỉnh sửa các block trước đó 
+    + Mô tả: 
+    class Block {
+    constructor(timestamp = "", data = []) {
+        this.timestamp = timestamp;
+        this.data = data;
+        this.hash = Block.getHash(this);
+        this.prevHash = "";
+        this.nonce = 0;
+    }
+
+    static getHash(block) {
+        return SHA256(block.prevHash + block.timestamp + JSON.stringify(block.data) + block.nonce);
+    }
+
+    mine(difficulty) {
+        while(!this.hash.startsWith(Array(difficulty + 1).join("0"))) {
+            this.nonce++;
+            this.hash = Block.getHash(this);
+        }
+    }
+    ...}
+    Trong phương thức "mine(difficulty)", khi ta thay đổi một giá trị bất kỳ trên mạng lưới, ta sẽ luôn được một hash hoàn toàn mới, nên ta phải luôn tăng nonce liên tục cho đến khi giá trị hash đạt được yêu cầu
+    => Không thể chỉnh sửa lại một block với một prevHash trước đó mà vừa có thể bắt kịp nhưng block khác
+    - Gốc thì difficulty sẽ là 1 và nó sẽ tăng dần lên tùy thuộc vào cơ chế đào của blockchain và số lượng block đào được
+
+- Mạng P2P (Peer to Peer): Trong một mạng p2p, các máy (gọi là các nodes) có thể gửi tin nhắn cho nhau mà không cần bất kì bên thứ ba nào. Có thể lấy là ví dụ là một nhóm bạn làm việc cùng nhau. Mọi người có thể hoạt động một cách độc lập, quyết định sẽ được đưa ra theo số đông.
+    - Sử dụng WebSocket(WS)-TCP-based protocol để tạo mạng P2P
+
+-Cách chạy: 
+    - Khởi tạo các cặp Key Pair cho mỗi người dùng (Private Key & Public Key) cũng như MINT_ADDRESS cho hệ thống: Chuyển tới thư mục ./utils và chạy lệnh: 
+        node genkey.js 
+    Sau khi chạy thì sẽ có được các key
+    Thay đổi các key này vào mạng P2P cũng như block
+    - Sau đó lần lượt chạy mạng P2P để các người dùng có thể chuyển tiền cho nhau và kiểm tra các block
+        node p2p.js
+        node p2p(1).js
