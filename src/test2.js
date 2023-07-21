@@ -3,25 +3,23 @@ const sha256 = require("sha256");
 SHA256 = (message) => sha256(message);
 
 const EC = require("elliptic").ec,
-  ec = new EC("secp256k1"); 
+  ec = new EC("secp256k1");
 
-const {Block, Blockchain, Transaction, Crypto} = require("./block");
+const { Block, Blockchain, Transaction, Crypto } = require("./block");
 
-const MINT_PRIVATE_ADDRESS = "049ff90c66602bc415a0659e04ada68dd810b38f5cad8a033d006cdfe426e36ff4cd285d530c2824b715c3799f77aef41e0b1fd8e174ead0669dfd5b0a1b12349d";
-
+const MINT_PRIVATE_ADDRESS = "17c8e2c2352686c5514e04415be5b699415c22e3dc181b60f9ab204317aeb81c";
 const MINT_KEY_PAIR = ec.keyFromPrivate(MINT_PRIVATE_ADDRESS, "hex");
-
 const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
 
-const privateKey = '94f87428dda6b4017281499ac8d845d244a2f70accd06ee5727b1b074ff3f23d' // Private key of current user 
+const privateKey = "5f41fcfbe8b725f6a97fd04191a61e77f655bb2e5c1c79e9cdbf57dbdf1cc359";
 const keyPair = ec.keyFromPrivate(privateKey, "hex");
-const publicKey = keyPair.getPrivate("hex");
+const publicKey = keyPair.getPublic("hex");
 
 const WS = require("ws");
 
-const PORT = 3000;
-const PEERS = process.env.PEERS ? process.env.PEERS.split(",") : [];
-const MY_ADDRESS = process.env.MY_ADDRESS || "ws://localhost:3000";
+const PORT = 3001;
+const PEERS = ["ws://localhost:3000"];
+const MY_ADDRESS = "ws://localhost:3001";
 const server = new WS.Server({ port: PORT });
 
 let opened = [], connected = [];
@@ -215,18 +213,17 @@ process.on("uncaughtException", err => console.log(err));
 PEERS.forEach(peer => connect(peer));
 
 setTimeout(() => {
-	const transaction = new Transaction(publicKey, "04ba19a40a66498f71b6363bbfa36f1f0b36b004219860e122b597438966dc173677af7da5a1454e1e7cc2d2b4d2ec9fae4fc4fb589b507dd3a9409f681a6312b7", 200, 10);
+	if (Crypto.transactions.length !== 0) {
+		Crypto.mineTransactions(publicKey);
 
-	transaction.sign(keyPair);
-
-	sendMessage(produceMessage("TYPE_CREATE_TRANSACTION", transaction));
-
-	Crypto.addTransaction(transaction);
-    Crypto.mineTransactions("04ba19a40a66498f71b6363bbfa36f1f0b36b004219860e122b597438966dc173677af7da5a1454e1e7cc2d2b4d2ec9fae4fc4fb589b507dd3a9409f681a6312b7");
-
-}, 50);
+		sendMessage(produceMessage("TYPE_REPLACE_CHAIN", [
+			Crypto.getLastBlock(),
+			Crypto.difficulty
+		]))
+	}
+}, 6500);
 
 setTimeout(() => {
 	console.log(opened);
 	console.log(Crypto);
-}, 10);
+}, 10000);

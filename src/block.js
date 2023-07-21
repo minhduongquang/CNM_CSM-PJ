@@ -6,19 +6,19 @@ SHA256 = (message) => sha256(message);
 
 const EC = require("elliptic").ec,
   ec = new EC("secp256k1");
-  
-const MINT_PRIVATE_ADDRESS = "049ff90c66602bc415a0659e04ada68dd810b38f5cad8a033d006cdfe426e36ff4cd285d530c2824b715c3799f77aef41e0b1fd8e174ead0669dfd5b0a1b12349d";
+
+const MINT_PRIVATE_ADDRESS = "17c8e2c2352686c5514e04415be5b699415c22e3dc181b60f9ab204317aeb81c";
 
 const MINT_KEY_PAIR = ec.keyFromPrivate(MINT_PRIVATE_ADDRESS, "hex")
 
 const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex")
 
 class Block {
-    constructor(timestamp = "", data = []) {
+    constructor(timestamp = Date.now().toString(), data = []) {
         this.timestamp = timestamp;
         this.data = data;
-        this.hash = Block.getHash(this);
         this.prevHash = "";
+        this.hash = Block.getHash(this);
         this.nonce = 0;
     }
 
@@ -27,7 +27,7 @@ class Block {
     }
 
     mine(difficulty) {
-        while(!this.hash.startsWith(Array(difficulty + 1).join("0"))) {
+        while (!this.hash.startsWith(Array(difficulty + 1).join("0"))) {
             this.nonce++;
             this.hash = Block.getHash(this);
         }
@@ -46,7 +46,7 @@ class Block {
 
         return (
             reward - gas === chain.reward &&
-            block.data.every(transaction => transaction.isValid(transaction, chain)) && 
+            block.data.every(transaction => Transaction.isValid(transaction, chain)) && 
             block.data.filter(transaction => transaction.from === MINT_PUBLIC_ADDRESS).length === 1
         );
     }
@@ -54,12 +54,11 @@ class Block {
 
 class Blockchain {
     constructor() {
-        //const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, holderKeyPair.getPublic("hex"), 100000); // Genesis block 
-        const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, "04d2acede993eae83522d324bbb17d9f8d8c65813b295aa0c04747efdf48b803a56e852aa1b861d0f224e22dd6302abe32c6ee77f13107a8b946e4fea6a3ffaa61", 100000); 
-        this.chain = [new Block("", [initalCoinRelease])]; //Setup timestamp for sync
+        const initalCoinRelease = new Transaction(MINT_PUBLIC_ADDRESS, "04719af634ece3e9bf00bfd7c58163b2caf2b8acd1a437a3e99a093c8dd7b1485c20d8a4c9f6621557f1d583e0fcff99f3234dd1bb365596d1d67909c270c16d64", 100000000);
+        this.transactions = [];
+        this.chain = [new Block("", [initalCoinRelease])];
         this.difficulty = 1;
         this.blockTime = 30000;
-        this.transactions = [];
         this.reward = 297;
     }
 
@@ -67,31 +66,11 @@ class Blockchain {
         return this.chain[this.chain.length - 1];
     }
 
-    getBalance(address) {
-        let balance = 0;
-
-        this.chain.forEach(block => {
-            block.data.forEach(transaction => {
-                if (transaction.from === address) {
-                    balance -= transaction.amount;
-                    balance -= transaction.gas
-                }
-
-                if (transaction.to === address) {
-                    balance += transaction.amount;
-                }
-            })
-        });
-
-        return balance;
-    }
-
     addBlock(block) {
         block.prevHash = this.getLastBlock().hash;
         block.hash = Block.getHash(block);
-
         block.mine(this.difficulty);
-        this.chain.push(block);
+        this.chain.push(Object.freeze(block));
 
         this.difficulty += Date.now() - parseInt(this.getLastBlock().timestamp) < this.blockTime ? 1 : -1;
     }
@@ -112,10 +91,30 @@ class Blockchain {
         const rewardTransaction = new Transaction(MINT_PUBLIC_ADDRESS, rewardAddress, this.reward + gas);
         rewardTransaction.sign(MINT_KEY_PAIR);
 
-        // Prevent people from minting coins and mine the minting transaction.
-        if (this.transactions.length !== 0) this.addBlock(new Block(Date.now().toString(), [rewardTransaction, ...this.transactions]));
+        const blockTransactions = [rewardTransaction, ...this.transactions];
 
-        this.transactions = [];
+        if (this.transactions.length !== 0) this.addBlock(new Block(Date.now().toString(), blockTransactions));
+
+        this.transactions.splice(0, blockTransactions.length - 1);
+    }
+
+    getBalance(address) {
+        let balance = 0;
+
+        this.chain.forEach(block => {
+            block.data.forEach(transaction => {
+                if (transaction.from === address) {
+                    balance -= transaction.amount;
+                    balance -= transaction.gas;
+                }
+
+                if (transaction.to === address) {
+                    balance += transaction.amount;
+                }
+            })
+        })
+
+        return balance;
     }
 
     static isValid(blockchain) {
@@ -131,38 +130,35 @@ class Blockchain {
                 return false;
             }
         }
+
         return true;
     }
 }
 
-class Transaction {
-        // Gas will be set to 0 because we are making it optional
-        constructor(from, to, amount, gas = 0) {
-            this.from = from;
-            this.to = to;
-            this.amount = amount;
-            this.gas = gas;
-        }
-
-        sign(keyPair) {
-            if (keyPair.getPublic("hex") === this.from) {
-                // Add gas
-                this.signature = keyPair.sign(SHA256(this.from + this.to + this.amount + this.gas), "base64").toDER("hex");
-            }
-        }
-
-        static  isValid(tx, chain) {
-            return (
-                tx.from &&
-                tx.to &&
-                tx.amount &&
-                // Add gas
-                (chain.getBalance(tx.from) >= tx.amount + tx.gas || tx.from === MINT_PUBLIC_ADDRESS) &&
-                ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.amount + tx.gas), tx.signature)
-            );
-        }
+class Transaction { 
+    constructor(from, to, amount, gas = 0) { 
+        this.from = from; 
+        this.to = to; 
+        this.amount = amount; 
+        this.gas = gas; 
+    } 
+ 
+    sign(keyPair) { 
+        if (keyPair.getPublic("hex") === this.from) { 
+            this.signature = keyPair.sign(SHA256(this.from + this.to + this.amount + this.gas), "base64").toDER("hex"); 
+        } 
+    } 
+ 
+    static isValid(tx, chain) { 
+        return ( 
+            tx.from && 
+            tx.to && 
+            tx.amount && 
+            (chain.getBalance(tx.from) >= tx.amount + tx.gas || tx.from === MINT_PUBLIC_ADDRESS) && 
+            ec.keyFromPublic(tx.from, "hex").verify(SHA256(tx.from + tx.to + tx.amount + tx.gas), tx.signature)
+        )
     }
-
+} 
 
 const Crypto = new Blockchain();
 // Crypto.addBlock(new Block(Date.now().toString(), ["Hello ", "World"]));

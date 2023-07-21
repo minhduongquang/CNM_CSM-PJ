@@ -23,7 +23,7 @@ console.log("Private key user2:", USER2_Private_key);
 const MINT_KEY_PAIR = ec.genKeyPair();
 
 const MINT_PUBLIC_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
-const MINT_PRIVATE_ADDRESS = MINT_KEY_PAIR.getPublic("hex");
+const MINT_PRIVATE_ADDRESS = MINT_KEY_PAIR.getPrivate("hex");
 
 console.log("Private Address MINT:", MINT_PRIVATE_ADDRESS);
 console.log("Public Address MINT:", MINT_PUBLIC_ADDRESS);

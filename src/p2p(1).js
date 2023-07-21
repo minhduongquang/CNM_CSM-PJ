@@ -19,10 +19,9 @@ const publicKey = keyPair.getPrivate("hex");
 const WS = require("ws");
 
 const PORT = 3001;
-console.log('port: ', PORT)
-const PEERS = ["ws://localhost:3001"];
-const MY_ADDRESS = "ws://localhost:3001";
-const server = new WS.Server({ port: 3001});
+const PEERS = process.env.PEERS ? process.env.PEERS.split(",") : [];
+const MY_ADDRESS = process.env.MY_ADDRESS || "ws://localhost:3001";
+const server = new WS.Server({ port: PORT });
 
 let opened = [], connected = [];
 let check = [];
